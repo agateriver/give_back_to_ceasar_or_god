@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug executable 'GiveBackToCeasarOrGod'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "run",
+                    "--bin=GiveBackToCeasarOrGod",
+                    "--",
+                    "-o",
+                    "${workspaceFolder}\\test\\test.xls"
+                ]
+            },
+            "args": []
+        },
+        {
+            "name": "Debug unit tests in executable 'GiveBackToCeasarOrGod'",
+            "type": "lldb",
+            "request": "launch",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--bin=GiveBackToCeasarOrGod"
+                ]
+            }
+        }
+    ]
+}

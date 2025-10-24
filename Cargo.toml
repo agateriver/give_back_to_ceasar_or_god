@@ -1,0 +1,32 @@
+[package]
+name = "GiveBackToCeasarOrGod"
+description = "M$ or WP$ ?"
+version = "0.1.0"
+edition = "2024"
+authors = ["xiepenguin@gmail.com"]
+license = "MIT"
+
+# [[bin]]
+# name = "MS_or_WPS"
+# path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.50", features = ["derive"] }
+regex = "1.12.2"
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "0.9.8"
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_EnhancedStorage", "Win32_System_Com", "Win32_System_Com_StructuredStorage", "Win32_System_Threading", "Win32_System_Variant", "Win32_UI_Shell", "Win32_UI_Shell_PropertiesSystem", "Win32_UI_WindowsAndMessaging"] }
+windows-registry = "0.6.1"
+windows-strings = "0.5.1"
+
+[build-dependencies]
+copy_to_output = "2.2.0"
+winres = "0.1.12"
+
+[profile.release]
+opt-level = "z"   # 最小化代码大小
+lto = true        # 链接时优化
+panic = "abort"   # 减少panic处理代码
+codegen-units = 1 # 更好的优化
+strip = true      # 移除调试符号
