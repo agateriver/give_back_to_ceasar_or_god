@@ -80,14 +80,12 @@ fn main() {
     if cfg!(debug_assertions) {
         copy_to_output::copy_to_output("assets/", "debug").unwrap();
         copy_to_output::copy_to_output("test/", "debug").unwrap();
-        copy_to_output::copy_to_output("assets/register.cmd", "debug").unwrap();
+        copy_to_output::copy_to_output("README.md", "debug").unwrap();
         let _ = fs::remove_file("target/debug/assets/register.cmd");
         let _ = fs::remove_file("target/debug/assets/app.ico");
-        copy_to_output::copy_to_output("README.md", "debug").unwrap();
     } else {
         copy_to_output::copy_to_output("assets/", "release").unwrap();
         copy_to_output::copy_to_output("test/", "release").unwrap();
-        copy_to_output::copy_to_output("assets/register.cmd", "release").unwrap();
         copy_to_output::copy_to_output("README.md", "debug").unwrap();
         let _ = fs::remove_file("target/release/assets/register.cmd");
         let _ = fs::remove_file("target/release/assets/app.ico");
