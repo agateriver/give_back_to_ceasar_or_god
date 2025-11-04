@@ -2,28 +2,30 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug executable 'GiveBackToCeasarOrGod'",
+            "name": "Debug 'Schrödinger's Office'",
             "type": "lldb",
             "request": "launch",
             "cargo": {
+                "env": {
+                    "path" : "C:\\Users\\Xie\\scoop\\apps\\rtools\\4.4.6335.6327\\x86_64-w64-mingw32.static.posix\\bin;$PATH"
+                },
                 "args": [
                     "run",
-                    "--bin=GiveBackToCeasarOrGod",
+                    "--bin=give_back_to_ceasar_or_god",
                     "--",
-                    "-o",
-                    "${workspaceFolder}\\test\\test.xls"
+                    "${workspaceFolder}\\test\\test_wps.xls"
                 ]
             },
             "args": []
         },
         {
-            "name": "Debug unit tests in executable 'GiveBackToCeasarOrGod'",
+            "name": "Debug unit tests in 'Schrödinger's Office'",
             "type": "lldb",
             "request": "launch",
             "cargo": {
                 "args": [
                     "test",
-                    "--bin=GiveBackToCeasarOrGod"
+                    "--bin=give_back_to_ceasar_or_god"
                 ]
             }
         }
