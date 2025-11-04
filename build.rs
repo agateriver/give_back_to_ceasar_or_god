@@ -26,6 +26,8 @@ fn create_release_zip() -> Result<(), Box<dyn std::error::Error>> {
         "WORDICON.EXE",
         "PPTICO.EXE", 
         "XLICONS.EXE",
+        "register.cmd",
+        "README.md",
     ];
 
     for file_name in files_to_include {
@@ -55,15 +57,17 @@ fn main() {
     res.compile().unwrap();
 
     if cfg!(debug_assertions) {
-        copy_to_output::copy_to_output("assets/register.cmd", "debug").unwrap();
         copy_to_output::copy_to_output("assets/WORDICON.EXE", "debug").unwrap();
         copy_to_output::copy_to_output("assets/PPTICO.EXE", "debug").unwrap();
-        copy_to_output::copy_to_output("assets/XLICONS.EXE", "debug").unwrap();    
+        copy_to_output::copy_to_output("assets/XLICONS.EXE", "debug").unwrap();   
+        copy_to_output::copy_to_output("assets/register.cmd", "debug").unwrap();
+        copy_to_output::copy_to_output("README.md", "debug").unwrap();    
     } else {
-        copy_to_output::copy_to_output("assets/register.cmd", "release").unwrap();
         copy_to_output::copy_to_output("assets/WORDICON.EXE", "release").unwrap();
         copy_to_output::copy_to_output("assets/PPTICO.EXE", "release").unwrap();
         copy_to_output::copy_to_output("assets/XLICONS.EXE", "release").unwrap();
+        copy_to_output::copy_to_output("assets/register.cmd", "release").unwrap();
+        copy_to_output::copy_to_output("README.md", "debug").unwrap();
 
         // 在发布模式下创建 zip 文件
         create_release_zip().unwrap_or_else(|e| {
