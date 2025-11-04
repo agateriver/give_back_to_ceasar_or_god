@@ -41,7 +41,8 @@ fn create_release_zip() -> Result<(), Box<dyn std::error::Error>> {
 
     for file_name in files_to_include {
         let file_path = PathBuf::from(file_name);
-        if file_path.starts_with("target")||file_path.ends_with("register.cmd") {
+        if file_path.starts_with("target")||file_path.ends_with("register.cmd") { 
+            // release binary and register script at root
             if file_path.exists() {
                 let file_data = fs::read(&file_path)?;
                 zip.start_file(file_path.file_name().unwrap().to_string_lossy(), options)?;
