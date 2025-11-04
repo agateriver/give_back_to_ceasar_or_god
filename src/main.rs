@@ -261,6 +261,7 @@ fn set_file_association(
             let icon_path = PathBuf::from(&app_path_str)
                 .parent()
                 .unwrap()
+                .join("assets")
                 .join("wordicon.exe,13");
             icon_path.to_string_lossy().to_string()
         }
@@ -268,6 +269,7 @@ fn set_file_association(
             let icon_path = PathBuf::from(&app_path_str)
                 .parent()
                 .unwrap()
+                .join("assets")
                 .join("xlicons.exe,1");
             icon_path.to_string_lossy().to_string()
         }
@@ -275,6 +277,7 @@ fn set_file_association(
             let icon_path = PathBuf::from(&app_path_str)
                 .parent()
                 .unwrap()
+                .join("assets")
                 .join("pptico.exe,10");
             icon_path.to_string_lossy().to_string()
         }

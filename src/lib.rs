@@ -64,28 +64,21 @@ pub fn get_kso_path() -> Result<String> {
 pub fn get_mso_path() -> Result<String> {
     // r#"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Office\16.0\Word\InstallRoot"#
 
-    let mso_path_16 = LOCAL_MACHINE
-        .open(r#"SOFTWARE\Microsoft\Office\16.0\Word\InstallRoot"#);
+    let versions =vec!["16.0", "15.0", "14.0","12.0","11.0"]; //ofiice 2003 ~ 365
+    for ver in versions {
+        let reg_path = format!(r#"SOFTWARE\Microsoft\Office\{}\Word\InstallRoot"#, ver);
+        let mso_path = LOCAL_MACHINE
+            .open(&reg_path);
 
-    if let Ok(key) = mso_path_16 {
-        if let Ok(path) = key.get_string("Path") {
-            if fs::metadata(&path).is_ok() {
-                return Ok(path);
+        if let Ok(key) = mso_path {
+            if let Ok(path) = key.get_string("Path") {
+                if fs::metadata(&path).is_ok() {
+                    return Ok(path);
+                }
             }
-        }
-    } 
-
-    let mso_path_15 = LOCAL_MACHINE
-        .open(r#"SOFTWARE\Microsoft\Office\15.0\Word\InstallRoot"#);
-
-    if let Ok(key) = mso_path_15 {
-        if let Ok(path) = key.get_string("Path") {
-            if fs::metadata(&path).is_ok() {
-                return Ok(path);
-            }
-        }
-    } 
-
+        } 
+    }
+    
     Err(anyhow!("从注册表获取微软办公路径失败"))
 
 }
