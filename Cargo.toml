@@ -6,10 +6,6 @@ edition = "2024"
 authors = ["xiepenguin@gmail.com"]
 license = "MIT"
 
-# [[bin]]
-# name = "MS_or_WPS"
-# path = "src/main.rs"
-
 [dependencies]
 anyhow = "1.0.100"
 clap = { version = "4.5.50", features = ["derive"] }
@@ -21,9 +17,9 @@ windows-registry = "0.6.1"
 windows-strings = "0.5.1"
 
 [build-dependencies]
+anyhow = "1.0.100"
 chrono = {version = "0.4.42", features = ["now"] }
 copy_to_output = "2.2.0"
-dotenv = { version = "0.15.0", features = ["cli"] }
 winres = "0.1.12"
 zip = "6.0.0"
 
