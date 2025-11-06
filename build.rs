@@ -14,6 +14,7 @@ fn main() -> Result<()> {
 
     let  options = fs_extra::dir::CopyOptions::new().overwrite(true);
 
+    //copy assets for test
     if cfg!(debug_assertions) {
         let _= fs::remove_dir_all(std::path::Path::new("target/debug/assets"));
         let _= fs::create_dir(std::path::Path::new("target/debug/assets"));
