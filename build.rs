@@ -1,6 +1,8 @@
 use std::fs;
+use fs_extra;
+use anyhow::Result;
 
-fn main() {
+fn main() -> Result<()> {
     let mut res = winres::WindowsResource::new();
     res.set_icon("assets/app.ico");
     res.set(
@@ -10,17 +12,34 @@ fn main() {
     res.set("ProductName", "M$ or WP$ ?");
     res.compile().unwrap();
 
+    let  options = fs_extra::dir::CopyOptions::new().overwrite(true);
+
     if cfg!(debug_assertions) {
-        copy_to_output::copy_to_output("assets/", "debug").unwrap();
-        copy_to_output::copy_to_output("test/", "debug").unwrap();
-        copy_to_output::copy_to_output("README.md", "debug").unwrap();
-        let _ = fs::remove_file("target/debug/assets/register.cmd");
-        let _ = fs::remove_file("target/debug/assets/app.ico");
+        let _= fs::remove_dir_all(std::path::Path::new("target/debug/assets"));
+        let _= fs::create_dir(std::path::Path::new("target/debug/assets"));
+        fs_extra::copy_items(
+            &vec!["assets/register.cmd","README.md"],
+            "target/debug/",
+            &options,
+        )?;
+        fs_extra::copy_items(
+            &vec!["assets/PPTICO.exe","assets/WORDICON.exe","assets/XLICONS.exe"],
+            "target/debug/assets/",
+            &options,
+        )?; 
     } else {
-        copy_to_output::copy_to_output("assets/", "release").unwrap();
-        copy_to_output::copy_to_output("test/", "release").unwrap();
-        copy_to_output::copy_to_output("README.md", "debug").unwrap();
-        let _ = fs::remove_file("target/release/assets/register.cmd");
-        let _ = fs::remove_file("target/release/assets/app.ico");
+        let _= fs::remove_dir_all(std::path::Path::new("target/debug/assets"));
+        let _= fs::create_dir(std::path::Path::new("target/release/assets"));
+        fs_extra::copy_items(
+            &vec!["assets/register.cmd","README.md"],
+            "target/release/",
+            &options,
+        )?;
+        fs_extra::copy_items(
+            &vec!["assets/PPTICO.exe","assets/WORDICON.exe","assets/XLICONS.exe"],
+            "target/release/assets/",
+            &options,
+        )?;       
     }
+    Ok(())
 }
