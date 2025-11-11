@@ -1,6 +1,5 @@
 #![windows_subsystem = "windows"]
 
-// #![allow(unused_imports)]
 use anyhow::{Context, Result, anyhow};
 use clap::{CommandFactory, Parser};
 use give_back_to_ceasar_or_god::*;
@@ -8,15 +7,21 @@ use serde::Deserialize;
 use std::ffi::OsString;
 use std::path::*;
 
-use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize};
 use windows::{
-    Win32::Storage::EnhancedStorage::*, Win32::System::Variant::*,
+    Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize},
+    Win32::Storage::EnhancedStorage::*, 
+    Win32::System::Variant::*,
     Win32::UI::WindowsAndMessaging::*,
 };
 use windows_registry::*;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    // name = "Schrödinger's Office Launcher",
+    version = "1.0",
+    author = "X.B.G",
+    about = "A utility to auto open office documents with WPS or MS Office based on file properties"
+)]
 struct Cli {
     /// 注册文件关联
     #[arg(short, long)]
@@ -224,7 +229,12 @@ fn main() -> Result<()> {
 
     // 如果没有提供任何参数，显示帮助信息
     if !cli.registry && cli.open.is_none() {
-        let message = Cli::command().render_help().to_string();
+        let message = Cli::command()
+            .disable_help_flag(true)
+            .disable_version_flag(true)
+            .no_binary_name(true)
+            .render_help()
+            .to_string();
         message_box("HELP", &message, MB_OK);
         return Ok(());
     }
@@ -245,68 +255,70 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    if let Some(file_path) = cli.open.as_deref() {
-        if !file_path.exists() {
-            message_box("错误", "目标文件不存在", MB_ICONWARNING);
-            anyhow::bail!("File does not exist: {}", file_path.to_str().unwrap());
-        }
-
-        let _com = ComInitializer::new()?;
-
-        let pkey_application_name = get_program_name_from_meta(&file_path); //.context("Failed to get 'PKEY_ApplicationName'")?;
-        if pkey_application_name.is_err() {
-            open_with_default_app(file_path);
-            return Ok(());
-        };
-
-        let program_name = pkey_application_name.unwrap();
-        let ext: OsString = file_path.extension().unwrap().to_ascii_lowercase();
-
-        let mut res: Result<(), anyhow::Error> = Err(anyhow::anyhow!("Unknown file type"));
-
-        if is_wps_pattern(&program_name) {
-            let exe_path = &exe_paths.wps;
-            println!("Launching WPS Office for file: {}", &exe_path);
-            match ext.to_str() {
-                Some("doc") | Some("docx") => {
-                    res = launch_process(&exe_path, "/wps", file_path.to_str().unwrap())
-                        .context("Failed to launch WPS Writer process");
-                }
-                Some("ppt") | Some("pptx") => {
-                    res = launch_process(&exe_path, "/wpp", file_path.to_str().unwrap())
-                        .context("Failed to launch WPS Presentation process");
-                }
-                Some("xls") | Some("xlsx") => {
-                    res = launch_process(&exe_path, "/et", file_path.to_str().unwrap())
-                        .context("Failed to launch WPS Spreadsheets process");
-                }
-                _ => {}
-            };
-        } else if is_ms_pattern(&program_name) {
-            match ext.to_str() {
-                Some("doc") | Some("docx") => {
-                    let exe_path = &exe_paths.word;
-                    res = launch_process(&exe_path, "", file_path.to_str().unwrap())
-                        .context("Failed to launch WinWord.exe process");
-                }
-                Some("ppt") | Some("pptx") => {
-                    let exe_path = &exe_paths.powerpoint;
-                    res = launch_process(&exe_path, "", file_path.to_str().unwrap())
-                        .context("Failed to launch PowerPnt.exe process");
-                }
-                Some("xls") | Some("xlsx") => {
-                    let exe_path = &exe_paths.excel;
-                    res = launch_process(&exe_path, "", file_path.to_str().unwrap())
-                        .context("Failed to launch Excel.exe process");
-                }
-                _ => {}
+    if cli.open.is_some() {
+        if let Some(file_path) = cli.open.as_deref() {
+            if !file_path.exists() {
+                message_box("错误", "目标文件不存在", MB_ICONWARNING);
+                anyhow::bail!("File does not exist: {}", file_path.to_str().unwrap());
             }
-        };
-        if res.is_err() {
-            //未知类型，使用系统默认打开方式
-            open_with_default_app(file_path);
+
+            let _com = ComInitializer::new()?;
+
+            let pkey_application_name = get_program_name_from_meta(&file_path); //.context("Failed to get 'PKEY_ApplicationName'")?;
+            if pkey_application_name.is_err() {
+                open_with_default_app(file_path);
+                return Ok(());
+            };
+
+            let program_name = pkey_application_name.unwrap();
+            let ext: OsString = file_path.extension().unwrap().to_ascii_lowercase();
+
+            let mut res: Result<(), anyhow::Error> = Err(anyhow::anyhow!("Unknown file type"));
+
+            if is_wps_pattern(&program_name) {
+                let exe_path = &exe_paths.wps;
+                println!("Launching WPS Office for file: {}", &exe_path);
+                match ext.to_str() {
+                    Some("doc") | Some("docx") => {
+                        res = launch_process(&exe_path, "/wps", file_path.to_str().unwrap())
+                            .context("Failed to launch WPS Writer process");
+                    }
+                    Some("ppt") | Some("pptx") => {
+                        res = launch_process(&exe_path, "/wpp", file_path.to_str().unwrap())
+                            .context("Failed to launch WPS Presentation process");
+                    }
+                    Some("xls") | Some("xlsx") => {
+                        res = launch_process(&exe_path, "/et", file_path.to_str().unwrap())
+                            .context("Failed to launch WPS Spreadsheets process");
+                    }
+                    _ => {}
+                };
+            } else if is_ms_pattern(&program_name) {
+                match ext.to_str() {
+                    Some("doc") | Some("docx") => {
+                        let exe_path = &exe_paths.word;
+                        res = launch_process(&exe_path, "", file_path.to_str().unwrap())
+                            .context("Failed to launch WinWord.exe process");
+                    }
+                    Some("ppt") | Some("pptx") => {
+                        let exe_path = &exe_paths.powerpoint;
+                        res = launch_process(&exe_path, "", file_path.to_str().unwrap())
+                            .context("Failed to launch PowerPnt.exe process");
+                    }
+                    Some("xls") | Some("xlsx") => {
+                        let exe_path = &exe_paths.excel;
+                        res = launch_process(&exe_path, "", file_path.to_str().unwrap())
+                            .context("Failed to launch Excel.exe process");
+                    }
+                    _ => {}
+                }
+            };
+            if res.is_err() {
+                //未知类型，使用系统默认打开方式
+                open_with_default_app(file_path);
+            }
+            return Ok(());
         }
-        return Ok(());
     }
     Ok(())
 }
