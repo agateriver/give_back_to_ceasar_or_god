@@ -6,14 +6,12 @@
             "type": "lldb",
             "request": "launch",
             "cargo": {
-                "env": {
-                    "path" : "C:\\Users\\Xie\\scoop\\apps\\rtools\\4.4.6335.6327\\x86_64-w64-mingw32.static.posix\\bin;$PATH"
-                },
                 "args": [
                     "run",
                     "--bin=give_back_to_ceasar_or_god",
                     "--",
-                    "${workspaceFolder}\\test\\test_wps.xls"
+                    "--open",
+                    "${workspaceFolder}\\test\\test.pdf"
                 ]
             },
             "args": []

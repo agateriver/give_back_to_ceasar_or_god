@@ -1,19 +1,19 @@
 #![windows_subsystem = "windows"]
-use give_back_to_ceasar_or_god::*;
+
+// #![allow(unused_imports)]
 use anyhow::{Context, Result, anyhow};
 use clap::{CommandFactory, Parser};
+use give_back_to_ceasar_or_god::*;
 use serde::Deserialize;
 use std::ffi::OsString;
 use std::path::*;
-use windows::Win32::UI::WindowsAndMessaging::MB_ICONWARNING;
-use windows::Win32::UI::WindowsAndMessaging::MESSAGEBOX_STYLE;
+
+use windows::Win32::System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize};
 use windows::{
-    Win32::Foundation::*, Win32::Storage::EnhancedStorage::*, Win32::System::Com::*,
-    Win32::System::Threading::*, Win32::System::Variant::*, Win32::UI::Shell::PropertiesSystem::*,
-    Win32::UI::Shell::ShellExecuteW, Win32::UI::WindowsAndMessaging::*, core::*,
+    Win32::Storage::EnhancedStorage::*, Win32::System::Variant::*,
+    Win32::UI::WindowsAndMessaging::*,
 };
 use windows_registry::*;
-use windows_strings::PCWSTR;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -33,20 +33,6 @@ struct ExePaths {
     powerpoint: String,
     excel: String,
 }
-
-fn message_box(title: &str, message: &str, utype: MESSAGEBOX_STYLE) {
-    let title_wide: Vec<u16> = title.encode_utf16().chain(std::iter::once(0)).collect();
-    let message_wide: Vec<u16> = message.encode_utf16().chain(std::iter::once(0)).collect();
-    unsafe {
-        MessageBoxW(
-            None,
-            PCWSTR(message_wide.as_ptr()),
-            PCWSTR(title_wide.as_ptr()),
-            utype,
-        );
-    }
-}
-
 
 struct ComInitializer;
 
@@ -70,30 +56,7 @@ impl Drop for ComInitializer {
     }
 }
 
-fn get_file_property_store(file_path: &Path) -> Result<IPropertyStore> {
-    if !file_path.exists() {
-        return Err(anyhow!("{:?}不存在!", file_path));
-    }
-    let file_path_wide: Vec<u16> = file_path
-        .to_str()
-        .unwrap()
-        .replace("/", "\\")
-        .encode_utf16()
-        .chain(std::iter::once(0))
-        .collect();
-    let path = PCWSTR(file_path_wide.as_ptr());
-
-    unsafe {
-        SHGetPropertyStoreFromParsingName(
-            path,
-            None,
-            GPS_DEFAULT, // &IPropertyStore::IID
-        )
-        .map_err(|e| anyhow!("in fn get_file_property_store: {}", e))
-    }
-}
-
-fn get_program_name(file_path: &Path) -> Result<String> {
+fn get_program_name_from_meta(file_path: &Path) -> Result<String> {
     let store = get_file_property_store(file_path)?; //.context("failure to get property store.")?;
     unsafe {
         let pkey_value = store.GetValue(&PKEY_ApplicationName);
@@ -109,42 +72,6 @@ fn get_program_name(file_path: &Path) -> Result<String> {
                 return Err(anyhow!("Failed to get documnet property value: {}", e));
             }
         }
-    }
-}
-
-fn launch_process(exe_path: &str, options: &str, file_arg: &str) -> Result<()> {
-    let exe_wide: Vec<u16> = format!("\"{}\" {} \"{}\"", exe_path, options, file_arg)
-        .encode_utf16()
-        .chain(std::iter::once(0))
-        .collect();
-
-    let mut si: STARTUPINFOW = unsafe { std::mem::zeroed() };
-    si.cb = std::mem::size_of::<STARTUPINFOW>() as u32;
-
-    let mut pi: PROCESS_INFORMATION = unsafe { std::mem::zeroed() };
-    let success = unsafe {
-        windows::Win32::System::Threading::CreateProcessW(
-            None,
-            Some(PWSTR(exe_wide.as_ptr() as *mut _)),
-            None,
-            None,
-            FALSE.into(),
-            CREATE_NEW_CONSOLE | CREATE_NO_WINDOW,
-            None,
-            None,
-            &mut si,
-            &mut pi,
-        )
-    };
-
-    if success.is_ok() {
-        unsafe {
-            let _ = CloseHandle(pi.hProcess);
-            let _ = CloseHandle(pi.hThread);
-        }
-        Ok(())
-    } else {
-        anyhow::bail!("CreateProcessW failed");
     }
 }
 
@@ -170,7 +97,6 @@ fn register_file_associations(exe_paths: &ExePaths) -> Result<()> {
             ".pptx" => "Microsoft PowerPoint Presentation",
             _ => ext,
         };
-
 
         // 设置文件扩展名关联
         set_file_association(ext, &prog_id, &description, app_path_str, exe_paths)
@@ -303,17 +229,13 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // let cfg_path = format!("{}\\config.toml", &get_current_exe_dir()?.to_str().unwrap());
-
-    // let exe_paths = read_config(&cfg_path)?.paths;
-
     let kso_path = get_kso_path()?;
     let mso_root = get_mso_path()?;
     let exe_paths = &ExePaths {
-        wps: kso_path,  
-        word: format!("{}WINWORD.EXE",&mso_root.clone()),
-        powerpoint:format!("{}POWERPNT.EXE",&mso_root.clone()),
-        excel:format!("{}EXCEL.EXE",&mso_root.clone())
+        wps: kso_path,
+        word: format!("{}WINWORD.EXE", &mso_root.clone()),
+        powerpoint: format!("{}POWERPNT.EXE", &mso_root.clone()),
+        excel: format!("{}EXCEL.EXE", &mso_root.clone()),
     };
 
     if cli.registry {
@@ -331,100 +253,58 @@ fn main() -> Result<()> {
 
         let _com = ComInitializer::new()?;
 
-        let program_name = get_program_name(&file_path)?; //.context("Failed to get 'PKEY_ApplicationName'")?;
+        let pkey_application_name = get_program_name_from_meta(&file_path); //.context("Failed to get 'PKEY_ApplicationName'")?;
+        if pkey_application_name.is_err() {
+            open_with_default_app(file_path);
+            return Ok(());
+        };
 
+        let program_name = pkey_application_name.unwrap();
         let ext: OsString = file_path.extension().unwrap().to_ascii_lowercase();
+
+        let mut res: Result<(), anyhow::Error> = Err(anyhow::anyhow!("Unknown file type"));
 
         if is_wps_pattern(&program_name) {
             let exe_path = &exe_paths.wps;
             println!("Launching WPS Office for file: {}", &exe_path);
             match ext.to_str() {
                 Some("doc") | Some("docx") => {
-                    launch_process(&exe_path, "/wps", file_path.to_str().unwrap())
-                        .context("Failed to launch WPS Writer process")?;
+                    res = launch_process(&exe_path, "/wps", file_path.to_str().unwrap())
+                        .context("Failed to launch WPS Writer process");
                 }
                 Some("ppt") | Some("pptx") => {
-                    launch_process(&exe_path, "/wpp", file_path.to_str().unwrap())
-                        .context("Failed to launch WPS Presentation process")?;
+                    res = launch_process(&exe_path, "/wpp", file_path.to_str().unwrap())
+                        .context("Failed to launch WPS Presentation process");
                 }
                 Some("xls") | Some("xlsx") => {
-                    launch_process(&exe_path, "/et", file_path.to_str().unwrap())
-                        .context("Failed to launch WPS Spreadsheets process")?;
+                    res = launch_process(&exe_path, "/et", file_path.to_str().unwrap())
+                        .context("Failed to launch WPS Spreadsheets process");
                 }
-                _ => {
-                    //未知类型，使用系统默认打开方式
-                    unsafe {
-                        ShellExecuteW(
-                            None,
-                            PCWSTR(
-                                "open"
-                                    .encode_utf16()
-                                    .chain(std::iter::once(0))
-                                    .collect::<Vec<u16>>()
-                                    .as_ptr(),
-                            ),
-                            PCWSTR(
-                                file_path
-                                    .to_str()
-                                    .unwrap()
-                                    .encode_utf16()
-                                    .chain(std::iter::once(0))
-                                    .collect::<Vec<u16>>()
-                                    .as_ptr(),
-                            ),
-                            PCWSTR::null(),
-                            PCWSTR::null(),
-                            SW_SHOWNORMAL,
-                        )
-                    };
-                }
+                _ => {}
             };
-        } else if is_ms_pattern(&program_name) || true {
-            // leave the '|| true' to cover all other cases and for future compatibility)
+        } else if is_ms_pattern(&program_name) {
             match ext.to_str() {
                 Some("doc") | Some("docx") => {
                     let exe_path = &exe_paths.word;
-                    launch_process(&exe_path, "", file_path.to_str().unwrap())
-                        .context("Failed to launch WinWord.exe process")?;
+                    res = launch_process(&exe_path, "", file_path.to_str().unwrap())
+                        .context("Failed to launch WinWord.exe process");
                 }
                 Some("ppt") | Some("pptx") => {
                     let exe_path = &exe_paths.powerpoint;
-                    launch_process(&exe_path, "", file_path.to_str().unwrap())
-                        .context("Failed to launch PowerPnt.exe process")?;
+                    res = launch_process(&exe_path, "", file_path.to_str().unwrap())
+                        .context("Failed to launch PowerPnt.exe process");
                 }
                 Some("xls") | Some("xlsx") => {
                     let exe_path = &exe_paths.excel;
-                    launch_process(&exe_path, "", file_path.to_str().unwrap())
-                        .context("Failed to launch Excel.exe process")?;
+                    res = launch_process(&exe_path, "", file_path.to_str().unwrap())
+                        .context("Failed to launch Excel.exe process");
                 }
-                _ => {
-                    //未知类型，使用系统默认打开方式
-                    unsafe {
-                        ShellExecuteW(
-                            None,
-                            PCWSTR(
-                                "open"
-                                    .encode_utf16()
-                                    .chain(std::iter::once(0))
-                                    .collect::<Vec<u16>>()
-                                    .as_ptr(),
-                            ),
-                            PCWSTR(
-                                file_path
-                                    .to_str()
-                                    .unwrap()
-                                    .encode_utf16()
-                                    .chain(std::iter::once(0))
-                                    .collect::<Vec<u16>>()
-                                    .as_ptr(),
-                            ),
-                            PCWSTR::null(),
-                            PCWSTR::null(),
-                            SW_HIDE, //SW_SHOWNORMAL,
-                        )
-                    };
-                }
-            };
+                _ => {}
+            }
+        };
+        if res.is_err() {
+            //未知类型，使用系统默认打开方式
+            open_with_default_app(file_path);
         }
         return Ok(());
     }
